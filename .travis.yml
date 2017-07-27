@@ -1,14 +1,35 @@
 language: java
+
 jdk:
   - oraclejdk8
-services:
-  - mongodb
-  - redis
-  - cassandra
-sudo: required
+
+before_script:
+  - mongod --version
+
+env:
+  matrix:
+    - PROFILE=ci
+    - PROFILE=mongo35-next
+
+# Current MongoDB version is 2.4.2 as of 2016-04, see https://github.com/travis-ci/travis-ci/issues/3694
+# apt-get starts a MongoDB instance so it's not started using before_script
+addons:
+  apt:
+    sources:
+      - mongodb-upstart
+      - sourceline: 'deb [arch=amd64] http://repo.mongodb.org/apt/ubuntu precise/mongodb-org/3.4 multiverse'
+        key_url: 'https://www.mongodb.org/static/pgp/server-3.4.asc'
+    packages:
+    - mongodb-org-server
+    - mongodb-org-shell
+    - oracle-java8-installer
+
+sudo: false
+
 cache:
   directories:
     - $HOME/.m2
+
 install: true
-before_script: travis_wait 45 ./mvnw install -q -U -DskipTests=true -Pfast -Dmaven.test.redirectTestOutputToFile=true
-script: ./mvnw install -q -nsu -Dmaven.test.redirectTestOutputToFile=true -P '!integration'
+
+script: "mvn clean dependency:list test -P${PROFILE} -Dsort"
